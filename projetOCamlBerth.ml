@@ -9,7 +9,7 @@ type formule =
 | Ssi of formule * formule
 ;;
 
-type interpretation == (char * bool) list;;
+type interpretation = (char * bool) list;;
 
 let rec lireFormule() =
 	begin
