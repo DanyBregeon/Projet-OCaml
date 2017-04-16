@@ -11,6 +11,41 @@ type formule =
 
 type interpretation = (char * bool) list;;
 
+type sequent = (formule list * formule list);;
+
+exception Echec;;
+
+let ajoute = fun p b (i:interpretation) ->
+  try if (List.assoc p i)=b then i else raise Echec
+  with Not_found -> (p,b)::i;;
+
+(*tout ce qui est dans la premiere liste est à valider et tout ce qui est dans la deuxieme est à falsifier *)
+let rec beth = fun (i:interpretation) (seq:sequent) ->
+  match seq with
+  ([],[])              -> i
+| ([],(Var p)::l)      -> beth (ajoute p false i) ([],l)
+| ([],Vrai::l)         -> raise Echec
+| ([],Faux::l)         -> beth i ([],l)
+| ([],(Non f)::l)      -> beth i ([f],l)
+| ([],(Et(f1,f2))::l)  -> begin try beth i ([],f1::l) 
+                          with Echec -> beth i ([],f2::l) end
+| ([],(Ou(f1,f2))::l)  -> beth i ([],f1::f2::l)
+| ([],(Imp(f1,f2))::l) -> beth i ([f1],f2::l)
+| ([],(Ssi(f1,f2))::l) -> begin try beth i ([f1],f2::l) 
+                          with Echec -> beth i ([f2],f1::l) end
+| ((Var p)::l,l2)      -> beth (ajoute p true i) (l,l2)
+| (Vrai::l,l2)         -> beth i (l,l2)
+| (Faux::l,l2)         -> raise Echec
+| ((Non f)::l,l2)      -> beth i (l,f::l2)
+| ((Et(f1,f2))::l,l2)  -> beth i (f1::f2::l,l2)
+| ((Ou(f1,f2))::l,l2)  -> begin try beth i (f1::l,l2)
+                          with Echec -> beth i (f2::l,l2) end
+| ((Imp(f1,f2))::l,l2) -> begin try beth i (l,f1::l2)
+                          with Echec -> beth i (f2::l,l2) end
+| ((Ssi(f1,f2))::l,l2) -> begin try beth i (f1::f2::l,l2) 
+                          with Echec -> beth i (l,f1::f2::l2) end
+;;
+
 
 let delimiterString = fun s ->
       let rec aux = fun s1 s2 p ->
@@ -57,29 +92,54 @@ let rec notation = fun s ->
 
 notation "<=> (& (=> (V (a) (c)) (~b)) (c)) (1)";;
 
+let rec affiche (i:interpretation) =
+  match i with
+  (c,b):: i1 -> if b then (print_string ((String.make 1 c)^" vrai \n"); affiche i1)
+  else (print_string ((String.make 1 c)^" faux  \n"); affiche i1)
+| []          -> print_string "\n"
+;;
 
 
 
-
-let rec lireFormule() =
-	begin
-	print_string "Veuillez inserer votre formule:";
-	print_newline();
-	let formuleString = read_line () in
-	let formule = notation formuleString in
-	begin
-	print_newline(); print_string "Que voulez vous faire ? Satisfaire/Falsifier/Valider/Insatisfaire";
-	print_newline();
-	let choix = read_line () in
-	print_string (formuleString^"   "^choix);
-	print_newline();
-	end;
-	print_string "Voulez-vous recommencer ? si oui o sinon n";
-	print_newline();
-	let recommencer = read_line () in
-	if recommencer = "o" then lireFormule()
-	else print_string "Au revoir !";
-	end;;
+let rec lireFormule () =
+   begin
+      print_string "Veuillez inserer votre formule:";
+      print_newline ();
+      let formuleString = read_line () in
+         let formule = notation formuleString in
+            begin
+               print_newline (); print_string "Que voulez vous faire ? satisfaire/falsifier/valider/insatisfaire";
+               print_newline ();
+               let choix = read_line () in
+                  match choix with
+                  "satisfaire" ->
+                     begin
+                        try
+                           let satisfaireFormule = beth [] ([formule], []) in
+                              begin
+                                 print_string ("Voici une interprétation satisfiante : \n");
+                                 affiche satisfaireFormule
+                              end
+                        with Echec -> print_string ("La forumule " ^ formuleString ^ " n'est pas satisfiable.")
+                     end
+                  | "falsifier" ->
+                     begin
+                        try
+                           let falsifierFormule = beth [] ([], [formule]) in
+                              begin
+                                 print_string ("Voici une interprétation falsifiante : \n");
+                                 affiche falsifierFormule
+                              end
+                        with Echec -> print_string ("La forumule " ^ formuleString ^ " n'est pas falsifiable.")
+                     end;
+                     print_newline ()
+            end;
+            print_string "Voulez-vous recommencer ? si oui o sinon n";
+            print_newline ();
+            let recommencer = read_line () in
+               if recommencer = "o" then lireFormule ()
+               else print_string "Au revoir !";
+   end;;
 
 let main () =
 	begin
@@ -90,3 +150,6 @@ let main () =
 
 (*  lireFormule();;  *)
 main();;
+=> (V (a) (b)) (& (a) (b))
+falsifier
+o
