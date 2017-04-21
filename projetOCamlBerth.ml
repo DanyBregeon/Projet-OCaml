@@ -96,7 +96,7 @@ let rec affiche (i:interpretation) =
   match i with
   (c,b):: i1 -> if b then (print_string ((String.make 1 c)^" vrai \n"); affiche i1)
   else (print_string ((String.make 1 c)^" faux  \n"); affiche i1)
-| []          -> print_string "\n"
+| | []  -> print_string "\n"
 ;;
 
 
@@ -112,7 +112,27 @@ let rec lireFormule () =
                print_newline ();
                let choix = read_line () in
                   match choix with
-                  "satisfaire" ->
+                  "insatisfaire" ->
+                     begin
+                        try
+                           let insatisfaireFormule = beth [] ([formule], []) in
+                              begin
+                                 print_string ("La formule " ^ formuleString ^ " n'est pas insatisfiable; voici une interprétation satisfiante : \n");
+                                 affiche insatisfaireFormule
+                              end
+                        with Echec -> print_string ("La forumule " ^ formuleString ^ " est insatisfiable.")
+                     end
+                  | "valider" ->
+                     begin
+                        try
+                           let validerFormule = beth [] ([], [formule]) in
+                              begin
+                                 print_string ("La formule " ^ formuleString ^ " n'est pas valide; voici une interprétation falsifiante : \n");
+                                 affiche validerFormule
+                              end
+                        with Echec -> print_string ("La forumule " ^ formuleString ^ " est valide.")
+                     end
+                  | "satisfaire" ->
                      begin
                         try
                            let satisfaireFormule = beth [] ([formule], []) in
@@ -131,7 +151,8 @@ let rec lireFormule () =
                                  affiche falsifierFormule
                               end
                         with Echec -> print_string ("La forumule " ^ formuleString ^ " n'est pas falsifiable.")
-                     end;
+                     end
+                  | _ -> print_string ("Choix non valide \n");
                      print_newline ()
             end;
             print_string "Voulez-vous recommencer ? si oui o sinon n";
@@ -150,6 +171,9 @@ let main () =
 
 (*  lireFormule();;  *)
 main();;
-=> (V (a) (b)) (& (a) (b))
+<=> (V (a) (b)) (& (a) (b))
+insatisfaire
+valider
 falsifier
-o
+satisfaire
+no
